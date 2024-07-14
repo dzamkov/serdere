@@ -1,7 +1,7 @@
 use super::number::{Num, NumBuilder};
-use super::{CollectionType, ValueType};
-use super::{JsonDeserializer, JsonOutliner};
-use crate::{prefix, Deserializer, NameMap, Outliner, TextReader};
+use crate::{CollectionType, ValueType};
+use crate::{JsonDeserializer, JsonOutliner};
+use serdere::{prefix, Deserializer, NameMap, Outliner, TextReader};
 use std::hash::{BuildHasher, Hasher};
 use std::num::NonZeroU32;
 use DeserializeErrorMessage::*;

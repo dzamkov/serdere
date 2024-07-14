@@ -4,11 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-itoa = "1.0.9"
-ryu = "1.0.15"
 thiserror = "1.0.40"
-hashbrown = { version = "0.13.2", features = ["raw"] }
 serdere-derive = { path = "../derive" }
-
-[dev-dependencies]
-indoc = "2"

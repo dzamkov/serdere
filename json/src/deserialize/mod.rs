@@ -1,11 +1,11 @@
 mod number;
 mod text;
 
-use super::{CollectionType, JsonOutliner, ValueType};
+use crate::{CollectionType, JsonOutliner, ValueType};
 #[allow(unused_imports)]
-use crate::Outliner;
-use crate::{Deserialize, Deserializer, StrPosition, TextReader};
-use crate::{NameMap, Value};
+use serdere::Outliner;
+use serdere::{Deserialize, Deserializer, StrPosition, TextReader};
+use serdere::{NameMap, Value};
 pub use text::*;
 
 /// Extends [`Deserializer`] with JSON-specific functionality.

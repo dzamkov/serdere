@@ -1,5 +1,5 @@
-use serdere::json::{to_str, TextSerializer, TextSerializerConfig};
-use serdere::json::{ValueExt, ValueSerialierExt};
+use serdere_json::{to_str, TextSerializer, TextSerializerConfig};
+use serdere_json::{ValueExt, ValueSerialierExt};
 use serdere::{Serialize, Value};
 use indoc::*;
 

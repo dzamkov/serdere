@@ -1,0 +1,13 @@
+[package]
+name = "serdere-json"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serdere = { path = "../core" }
+itoa = "1.0.9"
+ryu = "1.0.15"
+hashbrown = { version = "0.13.2", features = ["raw"] }
+
+[dev-dependencies]
+indoc = "2"

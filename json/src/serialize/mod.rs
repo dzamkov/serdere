@@ -1,7 +1,7 @@
 mod text;
 
 use super::JsonOutliner;
-use crate::{Serialize, Serializer, TextWriter, Value};
+use serdere::{Serialize, Serializer, TextWriter, Value};
 pub use text::*;
 
 /// Extends [`Serializer`] with JSON-specific functionality.

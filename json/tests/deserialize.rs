@@ -1,6 +1,6 @@
 #![allow(clippy::bool_assert_comparison)]
-use serdere::json::{from_str, DeserializeError, TextDeserializerConfig, ValueExt};
-use serdere::json::{JsonDeserializer, JsonOutliner, TextDeserializer};
+use serdere_json::{from_str, DeserializeError, TextDeserializerConfig, ValueExt};
+use serdere_json::{JsonDeserializer, JsonOutliner, TextDeserializer};
 use serdere::{Deserialize, Deserializer, Outliner, Value};
 
 #[test]

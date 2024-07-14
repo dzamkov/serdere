@@ -1,6 +1,6 @@
 use super::{JsonDeserializer, ValueType, JsonOutliner, JsonSerializer};
-use crate::deserialize::DeserializeStruct;
-use crate::{List, Struct, Value, INVALID_STATE_ERROR};
+use serdere::deserialize::DeserializeStruct;
+use serdere::{List, Struct, Value, INVALID_STATE_ERROR};
 use std::borrow::Cow;
 
 

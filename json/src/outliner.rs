@@ -1,4 +1,4 @@
-use crate::Outliner;
+use serdere::Outliner;
 
 /// Extends [`Outliner`] to be able to describe JSON structures.
 pub trait JsonOutliner: Outliner {

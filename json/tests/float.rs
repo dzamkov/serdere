@@ -1,4 +1,4 @@
-use serdere::json::{to_str, from_str};
+use serdere_json::{to_str, from_str};
 
 #[test]
 #[ignore]

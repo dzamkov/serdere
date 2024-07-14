@@ -1,5 +1,5 @@
-use super::JsonSerializer;
-use crate::{json::JsonOutliner, Outliner, Serializer, TextWriter};
+use crate::{JsonSerializer, JsonOutliner};
+use serdere::{Outliner, Serializer, TextWriter};
 
 /// A [`JsonSerializer`] which writes to a [`TextWriter`].
 pub struct TextSerializer<Writer: TextWriter> {

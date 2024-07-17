@@ -110,10 +110,10 @@ pub fn get_tag<D: JsonDeserializer + ?Sized>(
             if index <= max_index {
                 Ok(index)
             } else {
-                Err(deserializer.error_invalid_index(max_index))
+                Err(deserializer.error_invalid_index(index))
             }
         } else {
-            Err(deserializer.error_invalid_index(max_index))
+            Err(deserializer.error_invalid_index(usize::MAX))
         }
     }
 }

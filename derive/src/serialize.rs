@@ -17,15 +17,16 @@ pub fn expand(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
             )
         }
         syn::Data::Enum(en) => {
-            let variant_reprs = en
-                .variants
-                .iter()
-                .map(VariantRepr::get)
-                .collect::<syn::Result<Vec<_>>>()?;
-            let max_index = en.variants.len() - 1;
+            let mut variant_reprs = Vec::new();
+            let mut index = 0;
+            for variant in en.variants.iter() {
+                variant_reprs.push(VariantRepr::get(variant, &mut index)?);
+                index += 1;
+            }
+            let max_index = variant_reprs.iter().map(|v| v.index).max().unwrap();
             match EnumRepr::get(&input.attrs, &input.ident, en)? {
                 EnumRepr::Tag => {
-                    let variant_index = 0usize..;
+                    let variant_index = variant_reprs.iter().map(|v| v.index);
                     let variant_ident = en.variants.iter().map(|v| &v.ident);
                     let variant_name = variant_reprs.iter().map::<&str, _>(|v| v.name.as_ref());
                     ctx.generate_value(
@@ -45,9 +46,7 @@ pub fn expand(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
                 }
                 EnumRepr::Struct { name, tag } => {
                     let mut variant_arm = Vec::new();
-                    for (variant_index, (v, repr)) in
-                        en.variants.iter().zip(variant_reprs).enumerate()
-                    {
+                    for (v, repr) in en.variants.iter().zip(variant_reprs) {
                         let ident = &v.ident;
                         let (fields, body) = if repr.is_transparent {
                             let (fields, field_ty) = match &v.fields {
@@ -79,6 +78,7 @@ pub fn expand(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
                         } else {
                             serialize_fields(&mut ctx, &v.fields)?
                         };
+                        let variant_index = repr.index;
                         let variant_name: &str = repr.name.as_ref();
                         variant_arm.push(quote! {
                             Self::#ident #fields => {

@@ -4,6 +4,7 @@ mod serialize;
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens};
 use syn::DeriveInput;
+use syn::spanned::Spanned;
 
 #[proc_macro_derive(Serialize, attributes(serde))]
 pub fn derive_serialize(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -55,6 +56,9 @@ enum EnumRepr {
 struct VariantRepr {
     /// The name of this variant.
     name: String,
+
+    /// The index of this variant.
+    index: usize,
 
     /// Indicates whether serialization and deserialization is deferred to the variant's sole
     /// field.
@@ -142,8 +146,9 @@ impl EnumRepr {
 
 impl VariantRepr {
     /// Gets the representation for the given variant.
-    pub fn get(variant: &syn::Variant) -> syn::Result<Self> {
+    pub fn get(variant: &syn::Variant, index: &mut usize) -> syn::Result<Self> {
         let mut rename = None;
+        let mut reindex = None;
         let mut is_transparent = false;
         for attr in variant.attrs.iter() {
             if attr.path().is_ident("serde") {
@@ -151,6 +156,9 @@ impl VariantRepr {
                     if meta.path.is_ident("rename") {
                         let lit: syn::LitStr = meta.value()?.parse()?;
                         rename = Some(lit.value());
+                    } else if meta.path.is_ident("reindex") {
+                        let lit: syn::LitInt = meta.value()?.parse()?;
+                        reindex = Some(lit.base10_parse()?);
                     } else if meta.path.is_ident("transparent") {
                         is_transparent = true;
                         if variant.fields.len() != 1 {
@@ -169,9 +177,25 @@ impl VariantRepr {
             }
         }
 
+        // Parse discriminant
+        if let Some((_, discriminant)) = &variant.discriminant {
+            match discriminant {
+                syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Int(int), .. }) => {
+                    *index = int.base10_parse()?;
+                }
+                _ => {
+                    return Err(syn::Error::new(
+                        discriminant.span(),
+                        "serialization requires integer literal for enum discriminant",
+                    ));
+                }
+            }
+        }
+
         // Construct representation
         Ok(VariantRepr {
             name: rename.unwrap_or_else(|| variant.ident.to_string()),
+            index: reindex.unwrap_or(*index),
             is_transparent,
         })
     }

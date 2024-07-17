@@ -141,8 +141,8 @@ pub trait Deserializer: Outliner {
     }
 
     /// Constructs an error which says that the previously-read value is not a valid index.
-    fn error_invalid_index(&self, max_index: usize) -> Self::Error {
-        self.error(Box::new(InvalidIndexError { max_index }))
+    fn error_invalid_index(&self, index: usize) -> Self::Error {
+        self.error(Box::new(InvalidIndexError { index }))
     }
 
     /// Constructs an error which says more list items were expected. If errors contain position
@@ -181,11 +181,11 @@ impl std::fmt::Display for InvalidNameError {
 
 impl std::error::Error for InvalidNameError {}
 
-/// An [`std::error::Error`] which says that a read index was out of bounds.
+/// An [`std::error::Error`] which says that a read index was invalid.
 #[derive(thiserror::Error, Debug)]
-#[error("index is greater than the maximum allowed index, {max_index}")]
+#[error("index {index} is invalid")]
 pub struct InvalidIndexError {
-    pub max_index: usize,
+    pub index: usize
 }
 
 /// A type which can be deserialized using a deserializer of type `D` given access to a context

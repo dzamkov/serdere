@@ -335,12 +335,34 @@ fn test_derive_enum_simple() {
 }
 
 #[test]
+fn test_derive_enum_indices() {
+    #[derive(PartialEq, Eq, Debug, Deserialize)]
+    enum Test {
+        A,
+        B = 3,
+        C,
+        #[serde(reindex = 10)]
+        D,
+        E,
+        F = 9
+    }
+    assert_eq!(from_str::<Test>("0").unwrap(), Test::A);
+    assert_eq!(from_str::<Test>("3").unwrap(), Test::B);
+    assert_eq!(from_str::<Test>("4").unwrap(), Test::C);
+    assert_eq!(from_str::<Test>("10").unwrap(), Test::D);
+    assert_eq!(from_str::<Test>("6").unwrap(), Test::E);
+    assert_eq!(from_str::<Test>("9").unwrap(), Test::F);
+    assert!(from_str::<Test>("5").is_err());
+}
+
+#[test]
 fn test_derive_enum_complex() {
     #[derive(PartialEq, Eq, Debug, Deserialize)]
     enum Test<Data> {
         #[serde(rename = "unassigned")]
         Unassigned,
         #[serde(rename = "assigned")]
+        #[serde(reindex = 3)]
         Assigned {
             name: String,
             age: u32,
@@ -366,6 +388,7 @@ fn test_derive_enum_complex() {
         "type": "unassigned"
     }"#;
     assert_eq!(from_str::<Test<bool>>(source).unwrap(), Test::Unassigned);
+    assert!(from_str::<Test<bool>>("{ \"type\": 2 }").is_err());
 }
 
 #[test]

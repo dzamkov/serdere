@@ -13,13 +13,14 @@ pub fn expand(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
         }
         syn::Data::Enum(en) => {
             let ser = ctx.ser;
-            let variant_reprs = en
-                .variants
-                .iter()
-                .map(VariantRepr::get)
-                .collect::<syn::Result<Vec<_>>>()?;
+            let mut variant_reprs = Vec::new();
+            let mut index = 0;
+            for variant in en.variants.iter() {
+                variant_reprs.push(VariantRepr::get(variant, &mut index)?);
+                index += 1;
+            }
             let variant_name = variant_reprs.iter().map(|v| v.name.as_str());
-            let variant_index = 0usize..;
+            let variant_index = variant_reprs.iter().map(|v| v.index);
             let name_map = quote! {
                 #ser::FixedNameMap::new([
                     #(
@@ -28,29 +29,33 @@ pub fn expand(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
                 ]).unfix()
             };
             // TODO: Handle empty enum
-            let max_index = en.variants.len() - 1;
+            let max_index = variant_reprs.iter().map(|v| v.index).max().unwrap();
+            let variant_index = variant_reprs.iter().map(|v| v.index);
             match EnumRepr::get(&input.attrs, &input.ident, en)? {
                 EnumRepr::Tag => {
-                    let variant_index = 0usize..;
                     let variant_ident = en.variants.iter().map(|v| &v.ident);
                     ctx.generate_value(
                         false,
                         quote! {{
                             const NAMES: &#ser::NameMap<usize> = #name_map;
-                            let index = value.get_tag(#max_index, NAMES)?;
+                            let (de, done_flag) = value.into_raw();
+                            let index = de.get_tag(#max_index, NAMES)?;
+                            *done_flag = true;
                             match index {
                                 #(
                                     #variant_index => Self::#variant_ident,
                                 )*
-                                _ => ::core::unreachable!(),
+                                index => {
+                                    let err = de.error_invalid_index(index);
+                                    return ::std::result::Result::Err(err);
+                                }
                             }
                         }},
                     )
                 }
                 EnumRepr::Struct { name, tag } => {
-                    let variant_index = 0usize..;
                     let mut variant_body = Vec::new();
-                    for (v, repr) in en.variants.iter().zip(variant_reprs) {
+                    for (v, repr) in en.variants.iter().zip(variant_reprs.iter()) {
                         let variant_ident = &v.ident;
                         if repr.is_transparent {
                             let field_ty = match &v.fields {
@@ -95,12 +100,17 @@ pub fn expand(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
                         name.as_str(),
                         quote! {{
                             const NAMES: &#ser::NameMap<usize> = #name_map;
-                            let index = st.field(#tag)?.get_tag(#max_index, NAMES)?;
+                            let (de, done_flag) = st.field(#tag)?.into_raw();
+                            let index = de.get_tag(#max_index, NAMES)?;
+                            *done_flag = true;
                             match index {
                                 #(
                                     #variant_index => #variant_body,
                                 )*
-                                _ => ::core::unreachable!(),
+                                index => {
+                                    let err = de.error_invalid_index(index);
+                                    return ::std::result::Result::Err(err);
+                                }
                             }
                         }},
                     )

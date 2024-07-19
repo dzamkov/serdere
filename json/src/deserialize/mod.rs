@@ -85,6 +85,10 @@ pub trait JsonDeserializer: JsonOutliner + Deserializer {
         Ok(())
     }
 
+    /// Constructs an error which says that the value at the top of the stack should have one of
+    /// the given types.
+    fn error_expected_type(&self, expected: &'static [ValueType]) -> Self::Error;
+
     /// Constructs an error which says that a particular key for an object is missing. If errors
     /// contain position information, the error will be tagged to the most recently popped item
     /// (which should be an object).
@@ -130,7 +134,7 @@ pub fn open_struct<D: JsonDeserializer + ?Sized>(
             deserializer.open_list()?;
             Ok(())
         }
-        _ => todo!(), // TODO: Error
+        _ => Err(deserializer.error_expected_type(&[ValueType::Object, ValueType::Array])),
     }
 }
 

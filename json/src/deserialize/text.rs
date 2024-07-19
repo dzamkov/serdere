@@ -296,7 +296,7 @@ impl<Reader: TextReader> TextDeserializer<Reader> {
                 } else {
                     Err(DeserializeError::new(
                         pos.clone(),
-                        DeserializeErrorMessage::ExpectedNumber,
+                        DeserializeErrorMessage::Expected(&[ValueType::Number]),
                     ))
                 }
             }
@@ -364,7 +364,10 @@ impl<Reader: TextReader> Outliner for TextDeserializer<Reader> {
                         }
                         Ok(())
                     }
-                    Some(_) => Err(DeserializeError::new(self.error_pos.clone(), ExpectedNull)),
+                    Some(_) => Err(DeserializeError::new(
+                        self.error_pos.clone(),
+                        Expected(&[ValueType::Null]),
+                    )),
                     None => Err(DeserializeError::new(self.error_pos.clone(), UnexpectedEof)),
                 }
             }
@@ -384,7 +387,7 @@ impl<Reader: TextReader> Outliner for TextDeserializer<Reader> {
                 } else {
                     Err(DeserializeError::new(
                         pos.clone(),
-                        DeserializeErrorMessage::ExpectedNull,
+                        DeserializeErrorMessage::Expected(&[ValueType::Null]),
                     ))
                 }
             }
@@ -415,7 +418,7 @@ impl<Reader: TextReader> Outliner for TextDeserializer<Reader> {
                     }
                     Some(_) => Err(DeserializeError::new(
                         pos,
-                        DeserializeErrorMessage::ExpectedString,
+                        DeserializeErrorMessage::Expected(&[ValueType::String]),
                     )),
                     None => Err(DeserializeError::new(pos, UnexpectedEof)),
                 }
@@ -438,7 +441,7 @@ impl<Reader: TextReader> Outliner for TextDeserializer<Reader> {
                 } else {
                     Err(DeserializeError::new(
                         pos.clone(),
-                        DeserializeErrorMessage::ExpectedString,
+                        DeserializeErrorMessage::Expected(&[ValueType::String]),
                     ))
                 }
             }
@@ -508,7 +511,7 @@ impl<Reader: TextReader> JsonOutliner for TextDeserializer<Reader> {
                     }
                     Some(_) => Err(DeserializeError::new(
                         pos,
-                        DeserializeErrorMessage::ExpectedObject,
+                        DeserializeErrorMessage::Expected(&[ValueType::Object]),
                     )),
                     None => Err(DeserializeError::new(pos, UnexpectedEof)),
                 }
@@ -566,7 +569,7 @@ impl<Reader: TextReader> JsonOutliner for TextDeserializer<Reader> {
                 } else {
                     Err(DeserializeError::new(
                         pos.clone(),
-                        DeserializeErrorMessage::ExpectedObject,
+                        DeserializeErrorMessage::Expected(&[ValueType::Object]),
                     ))
                 }
             }
@@ -623,7 +626,7 @@ impl<Reader: TextReader> Deserializer for TextDeserializer<Reader> {
                 } else {
                     Err(DeserializeError::new(
                         pos.clone(),
-                        DeserializeErrorMessage::ExpectedBool,
+                        DeserializeErrorMessage::Expected(&[ValueType::Bool]),
                     ))
                 }
             }
@@ -772,7 +775,7 @@ impl<Reader: TextReader> Deserializer for TextDeserializer<Reader> {
                     }
                     Some(_) => Err(DeserializeError::new(
                         pos,
-                        DeserializeErrorMessage::ExpectedArray,
+                        DeserializeErrorMessage::Expected(&[ValueType::Array]),
                     )),
                     None => Err(DeserializeError::new(pos, UnexpectedEof)),
                 }
@@ -798,7 +801,7 @@ impl<Reader: TextReader> Deserializer for TextDeserializer<Reader> {
                 } else {
                     Err(DeserializeError::new(
                         pos.clone(),
-                        DeserializeErrorMessage::ExpectedArray,
+                        DeserializeErrorMessage::Expected(&[ValueType::Array]),
                     ))
                 }
             }
@@ -1111,6 +1114,22 @@ impl<Reader: TextReader> JsonDeserializer for TextDeserializer<Reader> {
         self.error_pos = self.outline.stack_items.pop().unwrap().pos;
         *at_start = false;
         Ok(false)
+    }
+
+    fn error_expected_type(&self, expected: &'static [ValueType]) -> Self::Error {
+        DeserializeError::new(
+            match self.state {
+                DeserializerState::StreamingValue => self.reader.position(),
+                DeserializerState::LookbackValue { index, .. } => {
+                    self.outline.lookback_items[index].pos.clone()
+                }
+                DeserializerState::NullValue { key, .. } => {
+                    return self.error_unexpected_virtual_null(key)
+                }
+                _ => panic!("{}", NOT_VALUE),
+            },
+            DeserializeErrorMessage::Expected(expected),
+        )
     }
 
     fn error_missing_entry(&self, key: String) -> Self::Error {
@@ -1446,7 +1465,7 @@ trait TextReaderExt: TextReader {
                 }
                 Ok(false)
             }
-            Some(_) => Err(DeserializeError::new(pos, ExpectedBool)),
+            Some(_) => Err(DeserializeError::new(pos, Expected(&[ValueType::Bool]))),
             None => Err(DeserializeError::new(pos, UnexpectedEof)),
         }
     }
@@ -1513,10 +1532,14 @@ trait TextReaderExt: TextReader {
                             }
                             negate = true;
                         }
-                        Some(_) => return Err(DeserializeError::new(pos, ExpectedNumber)),
+                        Some(_) => {
+                            return Err(DeserializeError::new(pos, Expected(&[ValueType::Number])))
+                        }
                         None => return Err(DeserializeError::new(pos, UnexpectedEof)),
                     },
-                    Some(_) => return Err(DeserializeError::new(pos, ExpectedNumber)),
+                    Some(_) => {
+                        return Err(DeserializeError::new(pos, Expected(&[ValueType::Number])))
+                    }
                     None => return Err(DeserializeError::new(pos, UnexpectedEof)),
                 }
 
@@ -1552,7 +1575,7 @@ trait TextReaderExt: TextReader {
                         return Err(DeserializeError::new(pos, NumberOverflow));
                     }
                 }
-                Some(_) => return Err(DeserializeError::new(pos, ExpectedNumber)),
+                Some(_) => return Err(DeserializeError::new(pos, Expected(&[ValueType::Number]))),
                 None => return Err(DeserializeError::new(pos, UnexpectedEof)),
             }
             loop {
@@ -1586,7 +1609,7 @@ trait TextReaderExt: TextReader {
                 Some(ch @ '0'..='9') => {
                     exp_builder.push_digit((ch as u8) - b'0');
                 }
-                Some(_) => return Err(DeserializeError::new(pos, ExpectedNumber)),
+                Some(_) => return Err(DeserializeError::new(pos, Expected(&[ValueType::Number]))),
                 None => return Err(DeserializeError::new(pos, UnexpectedEof)),
             },
             Some('-') => match self.next() {
@@ -1594,10 +1617,10 @@ trait TextReaderExt: TextReader {
                     negate_exp = true;
                     exp_builder.push_digit((ch as u8) - b'0');
                 }
-                Some(_) => return Err(DeserializeError::new(pos, ExpectedNumber)),
+                Some(_) => return Err(DeserializeError::new(pos, Expected(&[ValueType::Number]))),
                 None => return Err(DeserializeError::new(pos, UnexpectedEof)),
             },
-            Some(_) => return Err(DeserializeError::new(pos, ExpectedNumber)),
+            Some(_) => return Err(DeserializeError::new(pos, Expected(&[ValueType::Number]))),
             None => return Err(DeserializeError::new(pos, UnexpectedEof)),
         }
         loop {
@@ -2071,12 +2094,7 @@ pub enum DeserializeErrorMessage {
     UnexpectedEof,
     UnexpectedChar,
     InvalidLiteral,
-    ExpectedString,
-    ExpectedNumber,
-    ExpectedObject,
-    ExpectedArray,
-    ExpectedBool,
-    ExpectedNull,
+    Expected(&'static [ValueType]),
     NumberOverflow,
     UnrecognizedEscape,
     MissingKey(String),
@@ -2110,12 +2128,28 @@ impl std::fmt::Display for DeserializeErrorMessage {
             UnexpectedEof => f.write_str("unexpected EOF"),
             UnexpectedChar => f.write_str("unexpected character"),
             InvalidLiteral => f.write_str("invalid literal"),
-            ExpectedString => f.write_str("expected string"),
-            ExpectedNumber => f.write_str("expected number"),
-            ExpectedObject => f.write_str("expected object"),
-            ExpectedArray => f.write_str("expected array"),
-            ExpectedBool => f.write_str("expected bool"),
-            ExpectedNull => f.write_str("expected 'null'"),
+            Expected(types) => {
+                f.write_str("expected ")?;
+                let name = |ty| match ty {
+                    ValueType::String => "string",
+                    ValueType::Number => "number",
+                    ValueType::Object => "object",
+                    ValueType::Array => "array",
+                    ValueType::Bool => "bool",
+                    ValueType::Null => "'null'",
+                };
+                if types.len() == 1 {
+                    f.write_str(name(types[0]))
+                } else {
+                    f.write_str(name(types[0]))?;
+                    for i in 1..(types.len() - 1) {
+                        f.write_str(", ")?;
+                        f.write_str(name(types[i]))?;
+                    }
+                    f.write_str(" or ")?;
+                    f.write_str(name(types[types.len() - 1]))
+                }
+            }
             NumberOverflow => f.write_str("numeric overflow"),
             UnrecognizedEscape => f.write_str("unrecognized escape sequence"),
             MissingKey(key) => write!(f, "missing object key {:?}", key),
